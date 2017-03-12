@@ -15,4 +15,9 @@ ssh_run() {
 
 ssh_run echo test
 rm -f travis-glowing-bear.enc
-rsync -re ssh --delete-after --exclude=/.git ./ git@$DEPLOY_SERVER:/srv/irc
+rsync -re ssh \
+  --delete-after \
+  --exclude=/.git \
+  --exclude=/node_modules/ \
+  --exclude=/bower_components/ \
+  ./ git@$DEPLOY_SERVER:/srv/irc
