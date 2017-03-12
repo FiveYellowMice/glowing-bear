@@ -3,12 +3,5 @@ node_js:
   - "0.10"
 install: "npm install"
 script: "sh -e run_tests.sh"
-notifications:
-  email: false
-  irc:
-    channels: "chat.freenode.net#glowing-bear"
-    use_notice: true
-    skip_join: true
-    on_success: never
-    on_failure: always
-sudo: false
+after_success:
+  - "if [ $TRAVIS_PULL_REQUEST = false ] && [ $TRAVIS_BRANCH = master ]; then ./ci-deploy.sh; fi"
