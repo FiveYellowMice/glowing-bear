@@ -20,4 +20,4 @@ rsync -re ssh \
   --exclude=/.git \
   --exclude=/node_modules/ \
   --exclude=/bower_components/ \
-  ./ git@$DEPLOY_SERVER:/srv/irc
+  ./ git@$DEPLOY_SERVER:/srv/irc/glowing-bear
