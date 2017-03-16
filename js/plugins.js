@@ -238,7 +238,7 @@ plugins.factory('userPlugins', function() {
             mimeDetectRequest.open('GET', 'php/detect-mime-type.php?url=' + encodeURIComponent(url), true);
             mimeDetectRequest.addEventListener('error', function() {
                 // Do nothing.
-            })
+            });
 
             mimeDetectRequest.addEventListener('load', function() {
                 var info = JSON.parse(mimeDetectRequest.responseText);
@@ -249,7 +249,7 @@ plugins.factory('userPlugins', function() {
                 } else if (/^video\/(?:3gpp|avi|flv|matroska|mp4|ogv|webm)$/.test(info.type)) {
                     showPreviewVideo(url);
                 }
-            })
+            });
 
             mimeDetectRequest.send();
 
@@ -283,8 +283,8 @@ plugins.factory('userPlugins', function() {
                                                     .attr('src', url));
                 element.innerHTML = velement.prop('outerHTML');
             }
-        }
-    })
+        };
+    });
 
 
     return {
