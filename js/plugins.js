@@ -175,90 +175,6 @@ plugins.factory('userPlugins', function() {
     };
 
 
-    /*
-     * Image Preview
-     */
-    var imagePlugin = new UrlPlugin('image', function(url) {
-        if (url.match(/\.(bmp|gif|ico|jpeg|jpg|png|svg|svgz|tif|tiff|webp)(:(small|medium|large))?\b/i)) {
-            /* A fukung.net URL may end by an image extension but is not a direct link. */
-            if (url.indexOf("^https?://fukung.net/v/") != -1) {
-                url = url.replace(/.*\//, "http://media.fukung.net/imgs/");
-            } else if (url.match(/^http:\/\/(i\.)?imgur\.com\//i)) {
-                // remove protocol specification to load over https if used by g-b
-                url = url.replace(/http:/, "https:");
-            } else if (url.match(/^https:\/\/www\.dropbox\.com\/s\/[a-z0-9]+\//i)) {
-                // Dropbox requires a get parameter, dl=1
-                var dbox_url = document.createElement("a");
-                dbox_url.href = url;
-                var base_url = dbox_url.protocol + '//' + dbox_url.host + dbox_url.pathname + '?';
-                var dbox_params = dbox_url.search.substring(1).split('&');
-                var dl_added = false;
-                for (var i = 0; i < dbox_params.length; i++) {
-                    if (dbox_params[i].split('=')[0] === "dl") {
-                        dbox_params[i] = "dl=1";
-                        dl_added = true;
-                        // we continue looking at the other parameters in case
-                        // it's specified twice or something
-                    }
-                }
-                if (!dl_added) {
-                    dbox_params.push("dl=1");
-                }
-                url = base_url + dbox_params.join('&');
-            }
-            return function() {
-                var element = this.getElement();
-                var imgElem = angular.element('<a></a>')
-                                     .attr('target', '_blank')
-                                     .attr('href', url)
-                                     .append(angular.element('<img>')
-                                                    .addClass('embed')
-                                                    .attr('src', url));
-                element.innerHTML = imgElem.prop('outerHTML');
-            };
-        }
-    });
-
-    /*
-     * Audio Preview
-     */
-    var audioPlugin = new UrlPlugin('audio', function(url) {
-        if (url.match(/\.(flac|m4a|mid|midi|mp3|oga|ogg|ogx|opus|pls|spx|wav|wave|wma)\b/i)) {
-            return function() {
-                var element = this.getElement();
-                var aelement = angular.element('<audio controls></audio>')
-                                     .addClass('embed')
-                                     .attr('width', '560')
-                                     .append(angular.element('<source></source>')
-                                                    .attr('src', url));
-                element.innerHTML = aelement.prop('outerHTML');
-            };
-        }
-    });
-
-
-    /*
-     * Video Preview
-     */
-    var videoPlugin = new UrlPlugin('video', function(url) {
-        if (url.match(/\.(3gp|avi|flv|gifv|mkv|mp4|ogv|webm|wmv)\b/i)) {
-            if (url.match(/^http:\/\/(i\.)?imgur\.com\//i)) {
-                // remove protocol specification to load over https if used by g-b
-                url = url.replace(/\.(gifv)\b/i, ".webm");
-            }
-            return function() {
-                var element = this.getElement();
-                var velement = angular.element('<video autoplay loop muted></video>')
-                                     .addClass('embed')
-                                     .attr('width', '560')
-                                     .append(angular.element('<source></source>')
-                                                    .attr('src', url));
-                element.innerHTML = velement.prop('outerHTML');
-            };
-        }
-    });
-
-
  /* match giphy links and display the assocaited gif images
   * sample input:  http://giphy.com/gifs/eyes-shocked-bird-feqkVgjJpYtjy
   * sample output: https://media.giphy.com/media/feqkVgjJpYtjy/giphy.gif
@@ -308,8 +224,71 @@ plugins.factory('userPlugins', function() {
     });
 
 
+    /*
+     * Preview image, audio and video
+     */
+    var allMediaPlugin = new UrlPlugin('Media', function(url) {
+        if (/^https?:\/\/(?:giphy\.com\/gifs\/.*-(.*)\/?|twitter\.com\/(?:#!\/)?(\w+)\/status(?:es)?\/(\d+))/i.test(url)) {
+            return;
+        }
+        return function() {
+            var self = this;
+
+            var mimeDetectRequest = new XMLHttpRequest();
+            mimeDetectRequest.open('GET', 'php/detect-mime-type.php?url=' + encodeURIComponent(url), true);
+            mimeDetectRequest.addEventListener('error', function() {
+                // Do nothing.
+            })
+
+            mimeDetectRequest.addEventListener('load', function() {
+                var info = JSON.parse(mimeDetectRequest.responseText);
+                if (/^image\/(?:bmp|gif|x-icon|jpeg|png|svg+xml|tiff)$/.test(info.type)) {
+                    showPreviewImage(url);
+                } else if (/^audio\/(?:flac|m4a|midi|ogg|opus)$/.test(info.type)) {
+                    showPreviewAudio(url);
+                } else if (/^video\/(?:3gpp|avi|flv|matroska|mp4|ogv|webm)$/.test(info.type)) {
+                    showPreviewVideo(url);
+                }
+            })
+
+            mimeDetectRequest.send();
+
+            function showPreviewImage(url) {
+                var element = self.getElement();
+                var imgElem = angular.element('<a></a>')
+                                     .attr('target', '_blank')
+                                     .attr('href', url)
+                                     .append(angular.element('<img>')
+                                                    .addClass('embed')
+                                                    .attr('src', url));
+                element.innerHTML = imgElem.prop('outerHTML');
+            }
+
+            function showPreviewAudio(url) {
+                var element = self.getElement();
+                var aelement = angular.element('<audio controls></audio>')
+                                     .addClass('embed')
+                                     .attr('width', '560')
+                                     .append(angular.element('<source></source>')
+                                                    .attr('src', url));
+                element.innerHTML = aelement.prop('outerHTML');
+            }
+
+            function showPreviewVideo(url) {
+                var element = self.getElement();
+                var velement = angular.element('<video autoplay loop muted></video>')
+                                     .addClass('embed')
+                                     .attr('width', '560')
+                                     .append(angular.element('<source></source>')
+                                                    .attr('src', url));
+                element.innerHTML = velement.prop('outerHTML');
+            }
+        }
+    })
+
+
     return {
-        plugins: [imagePlugin, videoPlugin, audioPlugin, giphyPlugin, tweetPlugin]
+        plugins: [allMediaPlugin, giphyPlugin, tweetPlugin]
     };
 
 
