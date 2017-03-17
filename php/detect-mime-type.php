@@ -32,6 +32,9 @@ try {
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_NOBODY, true);
   curl_setopt($ch, CURLOPT_URL, $_GET['url']);
+  curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+  curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
+  curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 6);
   curl_exec($ch);
 
