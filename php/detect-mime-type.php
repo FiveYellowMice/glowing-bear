@@ -46,6 +46,9 @@ try {
   $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
   $content_length = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
   curl_close($ch);
+  if ($content_type) {
+    $content_type = strtok($content_type, ';');
+  }
   if ($content_length == -1) {
     $content_length = null;
   }
