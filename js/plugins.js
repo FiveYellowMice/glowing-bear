@@ -247,7 +247,10 @@ plugins.factory('userPlugins', function() {
                 } else if (/^audio\/(?:flac|m4a|midi|ogg|opus)$/.test(info.type)) {
                     showPreviewAudio(url);
                 } else if (/^video\/(?:3gpp|avi|flv|matroska|mp4|ogv|webm)$/.test(info.type)) {
-                    showPreviewVideo(url);
+                    if (info.length && info.length < 2097152) {
+                        // smaller than 2 MB
+                        showPreviewVideo(url);
+                    }
                 }
             });
 
