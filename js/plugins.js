@@ -242,7 +242,7 @@ plugins.factory('userPlugins', function() {
 
             mimeDetectRequest.addEventListener('load', function() {
                 var info = JSON.parse(mimeDetectRequest.responseText);
-                if (/^image\/(?:bmp|gif|x-icon|jpeg|png|svg+xml|tiff)$/.test(info.type)) {
+                if (/^image\/(?:bmp|gif|x-icon|jpeg|png|svg+xml|tiff|webp)$/.test(info.type)) {
                     showPreviewImage(url);
                 } else if (/^audio\/(?:flac|m4a|midi|ogg|opus)$/.test(info.type)) {
                     showPreviewAudio(url);
