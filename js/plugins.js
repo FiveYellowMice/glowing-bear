@@ -258,12 +258,17 @@ plugins.factory('userPlugins', function() {
 
             function showPreviewImage(url) {
                 var element = self.getElement();
-                var imgElem = angular.element('<a></a>')
+                var imgElem = angular.element('<img>')
+                                     .addClass('embed')
+                                     .attr('src', url);
+                if (/sticker/i.test(element.parentElement.parentElement.parentElement.innerText)) {
+                  // Smaller preview for stickers
+                  imgElem.addClass('preview-sticker');
+                }
+                var anchorElem = angular.element('<a></a>')
                                      .attr('target', '_blank')
                                      .attr('href', url)
-                                     .append(angular.element('<img>')
-                                                    .addClass('embed')
-                                                    .attr('src', url));
+                                     .append(imgElem);
                 element.innerHTML = imgElem.prop('outerHTML');
             }
 
