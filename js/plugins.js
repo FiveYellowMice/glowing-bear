@@ -269,7 +269,7 @@ plugins.factory('userPlugins', function() {
                                      .attr('target', '_blank')
                                      .attr('href', url)
                                      .append(imgElem);
-                element.innerHTML = imgElem.prop('outerHTML');
+                element.innerHTML = anchorElem.prop('outerHTML');
             }
 
             function showPreviewAudio(url) {
