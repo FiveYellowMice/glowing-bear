@@ -4,10 +4,8 @@
 
 Glowing Bear ~ Haram Edition ~ is a fork of [Glowing Bear](https://github.com/glowing-bear/glowing-bear). It has several improvements:
 
-- Less unecessary preview features  
-  Removed preview features of YouTube, DailyMotion, Allocine, Spotify, SoundCloud, Google Maps, Yr, Gist, Pastebin and Vine. Most of them use iframe which make the page more laggy, and take a lot of space to make it harder to scroll.
-- Smarter image previews  
-  The original Glowing Bear uses hard-coded RegEx to decide whether to show an image preview. That is understandable because it is the consequence of same-origin policy. But Glowing Bear ~ Haram Edition ~ uses a little bit of backend code (PHP) to implement true MIME type detection based on Content-Type header.
+- Real URL preview  
+  The original Glowing Bear uses a very dumb way to decide whether and how to show preview of an URL - by matching hard-coded RegExes. That is understandable because of the same-origin policy. But Glowing Bear ~ haram Edition ~ uses a little bit of backend code (PHP) to detect the Content-Type of the URL, and title and description of an HTML webpage. This way is also much more lightweight, compare to excessive use of iframes.
 - Smaller preview for stickers  
   Stickers are usually not as important as normal images. So to maximize screen usage, Glowing Bear ~ Haram Edition ~ will make them smaller.
 
