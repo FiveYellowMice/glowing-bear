@@ -29,20 +29,11 @@ describe('filter', function() {
             $provide.value('version', 'TEST_VER');
         }));
 
-        it('should recognize giphy gifs', inject(function(plugins) {
+        it('should recognize URLs', inject(function(plugins) {
             expectTheseMessagesToContain([
-                'https://giphy.com/gifs/eyes-shocked-bird-feqkVgjJpYtjy/',
-                'http://giphy.com/gifs/funny-cat-FiGiRei2ICzzG',
+                'https://exmaple.com/',
             ],
-            'Giphy',
-            plugins);
-        }));
-
-        it('should recognize tweets', inject(function(plugins) {
-            expectTheseMessagesToContain([
-                'https://twitter.com/DFB_Team_EN/statuses/488436782959448065',
-            ],
-            'Tweet',
+            'preview',
             plugins);
         }));
 

@@ -437,6 +437,44 @@ video.embed {
     max-width: 100%;
 }
 
+/* webpage summary */
+.embed-webpage-summary {
+    font-family: sans-serif;
+    padding: 0.25em;
+    clear: both;
+    line-height: 150%;
+}
+
+.embed-webpage-summary-title {
+    display: block;
+    font-size: 1.5em;
+    margin: 0.25em 0;
+}
+
+a.embed-webpage-summary-title {
+  color: inherit;
+  font-weight: bold;
+}
+
+a.embed-webpage-summary-title:hover {
+  color: inherit;
+}
+
+.embed-webpage-summary-origin {
+    display: block;
+    margin:  0.25em 0;
+    word-break: break-all;
+    font-size: 1em;
+    color: #999;
+}
+
+.embed-webpage-summary-description {
+    border: none;
+    margin: 0.5em 0;
+    padding: 0;
+    font-size: 1.1em;
+}
+
 div.colourbox {
     display: inline-block;
     border-radius: 3px;

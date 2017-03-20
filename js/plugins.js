@@ -175,74 +175,24 @@ plugins.factory('userPlugins', function() {
     };
 
 
- /* match giphy links and display the assocaited gif images
-  * sample input:  http://giphy.com/gifs/eyes-shocked-bird-feqkVgjJpYtjy
-  * sample output: https://media.giphy.com/media/feqkVgjJpYtjy/giphy.gif
-  */
-    var giphyPlugin = new UrlPlugin('Giphy', function(url) {
-        var regex = /^https?:\/\/giphy\.com\/gifs\/.*-(.*)\/?/i;
-        // on match, id will contain the entire url in [0] and the giphy id in [1]
-        var id = url.match(regex);
-        if (id) {
-            var src = "https://media.giphy.com/media/" + id[1] + "/giphy.gif";
-            return function() {
-                var element = this.getElement();
-                var gelement = angular.element('<a></a>')
-                                     .attr('target', '_blank')
-                                     .attr('href', url)
-                                     .append(angular.element('<img>')
-                                                    .addClass('embed')
-                                                    .attr('src', src));
-                element.innerHTML = gelement.prop('outerHTML');
-            };
-        }
-    });
-
-    var tweetPlugin = new UrlPlugin('Tweet', function(url) {
-        var regexp = /^https?:\/\/twitter\.com\/(?:#!\/)?(\w+)\/status(?:es)?\/(\d+)/i;
-        var match = url.match(regexp);
-        if (match) {
-            url = 'https://api.twitter.com/1/statuses/oembed.json?id=' + match[2];
-            return function() {
-                var element = this.getElement();
-                jsonp(url, function(data) {
-                    // separate the HTML into content and script tag
-                    var scriptIndex = data.html.indexOf("<script ");
-                    var content = data.html.substr(0, scriptIndex);
-                    // Set DNT (Do Not Track)
-                    content = content.replace("<blockquote class=\"twitter-tweet\">", "<blockquote class=\"twitter-tweet\" data-dnt=\"true\">");
-                    element.innerHTML = content;
-
-                    // The script tag needs to be generated manually or the browser won't load it
-                    var scriptElem = document.createElement('script');
-                    // Hardcoding the URL here, I don't suppose it's going to change anytime soon
-                    scriptElem.src = "https://platform.twitter.com/widgets.js";
-                    element.appendChild(scriptElem);
-                });
-            };
-        }
-    });
-
-
     /*
      * Preview image, audio and video
      */
-    var allMediaPlugin = new UrlPlugin('Media', function(url) {
-        if (/^https?:\/\/(?:giphy\.com\/gifs\/.*-(.*)\/?|twitter\.com\/(?:#!\/)?(\w+)\/status(?:es)?\/(\d+))/i.test(url)) {
-            return;
-        }
+    var previewPlugin = new UrlPlugin('preview', function(url) {
         return function() {
             var self = this;
 
             var mimeDetectRequest = new XMLHttpRequest();
-            mimeDetectRequest.open('GET', 'php/detect-mime-type.php?url=' + encodeURIComponent(url), true);
+            mimeDetectRequest.open('GET', 'php/preview-url.php?url=' + encodeURIComponent(url), true);
             mimeDetectRequest.addEventListener('error', function() {
                 // Do nothing.
             });
 
             mimeDetectRequest.addEventListener('load', function() {
                 var info = JSON.parse(mimeDetectRequest.responseText);
-                if (/^image\/(?:bmp|gif|x-icon|jpeg|png|svg+xml|tiff|webp)$/.test(info.type)) {
+                if (info.summary) {
+                    showPreviewWebpage(url, info);
+                } else if (/^image\/(?:bmp|gif|x-icon|jpeg|png|svg+xml|tiff|webp)$/.test(info.type)) {
                     showPreviewImage(url);
                 } else if (/^audio\/(?:flac|m4a|midi|ogg|opus)$/.test(info.type)) {
                     showPreviewAudio(url);
@@ -255,6 +205,27 @@ plugins.factory('userPlugins', function() {
             });
 
             mimeDetectRequest.send();
+
+            function showPreviewWebpage(url, info) {
+                var element = self.getElement();
+                var summaryElement = angular.element('<div></div>')
+                                            .addClass('embed-webpage-summary');
+                summaryElement.append(angular.element('<a></a>')
+                                             .addClass('embed-webpage-summary-title')
+                                             .attr('rel', 'noopener noreferrer')
+                                             .attr('target', '_blank')
+                                             .attr('href', url)
+                                             .text(info.summary.title || '(No Title)'));
+                summaryElement.append(angular.element('<small></small>')
+                                             .addClass('embed-webpage-summary-origin')
+                                             .text(info.summary.origin));
+                if (info.summary.description) {
+                    summaryElement.append(angular.element('<blockquote></blockquote>')
+                                                 .addClass('embed-webpage-summary-description')
+                                                 .text(info.summary.description));
+                }
+                element.innerHTML = summaryElement.prop('outerHTML');
+            }
 
             function showPreviewImage(url) {
                 var element = self.getElement();
@@ -296,7 +267,7 @@ plugins.factory('userPlugins', function() {
 
 
     return {
-        plugins: [allMediaPlugin, giphyPlugin, tweetPlugin]
+        plugins: [previewPlugin]
     };
 
 
