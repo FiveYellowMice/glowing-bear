@@ -56,7 +56,7 @@ weechat.factory('imgur', ['$rootScope', function($rootScope) {
                 showErrorMsg();
             }
 
-        }
+        };
 
         if ("upload" in xhr) {
 
@@ -77,7 +77,7 @@ weechat.factory('imgur', ['$rootScope', function($rootScope) {
 
         xhr.onerror = function() {
             showErrorMsg();
-        }
+        };
 
         xhr.send(image);
     };
