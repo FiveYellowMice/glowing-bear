@@ -10,25 +10,6 @@ weechat.factory('imgur', ['$rootScope', function($rootScope) {
         // Is it an image?
         if (!image || !image.type.match(/image.*/)) return;
 
-        // New file reader
-        var reader = new FileReader();
-
-        // When image is read
-        reader.onload = function (event) {
-            var image = event.target.result.split(',')[1];
-            upload(image, callback);
-        };
-
-        // Read image as data url
-        reader.readAsDataURL(image);
-
-    };
-
-    // Upload image to imgur from base64
-    var upload = function( base64img, callback ) {
-        // Set client ID (Glowing Bear)
-        var clientId = "164efef8979cd4b";
-
         // Progress bars container
         var progressBars = document.getElementById("imgur-upload-progress"),
             currentProgressBar = document.createElement("div");
@@ -40,38 +21,31 @@ weechat.factory('imgur', ['$rootScope', function($rootScope) {
         // Append progress bar
         progressBars.appendChild(currentProgressBar);
 
-        // Create new form data
-        var fd = new FormData();
-        fd.append("image", base64img); // Append the file
-        fd.append("type", "base64"); // Set image type to base64
-
         // Create new XMLHttpRequest
-        var xhttp = new XMLHttpRequest();
+        var xhr = new XMLHttpRequest();
 
-        // Post request to imgur api
-        xhttp.open("POST", "https://api.imgur.com/3/image", true);
-
-        // Set headers
-        xhttp.setRequestHeader("Authorization", "Client-ID " + clientId);
-        xhttp.setRequestHeader("Accept", "application/json");
+        // Post request to <del>Imgur</del><ins>Ymage</ins> API
+        xhr.open("POST", "https://img.fym.one/", true);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('Content-Type', image.type);
 
         // Handler for response
-        xhttp.onload = function() {
+        xhr.onload = function() {
 
             // Remove progress bar
             currentProgressBar.parentNode.removeChild(currentProgressBar);
 
             // Check state and response status
-            if(xhttp.status === 200) {
+            if(xhr.status === 200) {
 
                 // Get response text
-                var response = JSON.parse(xhttp.responseText);
+                var response = JSON.parse(xhr.responseText);
 
                 // Send link as message
-                if( response.data && response.data.link ) {
+                if (response.short_url) {
 
                     if (callback && typeof(callback) === "function") {
-                        callback(response.data.link.replace(/^http:/, "https:"));
+                        callback(response.short_url);
                     }
 
                 } else {
@@ -82,12 +56,12 @@ weechat.factory('imgur', ['$rootScope', function($rootScope) {
                 showErrorMsg();
             }
 
-        };
+        }
 
-        if( "upload" in xhttp ) {
+        if ("upload" in xhr) {
 
             // Set progress
-            xhttp.upload.onprogress = function (event) {
+            xhr.upload.onprogress = function (event) {
 
                 // Check if we can compute progress
                 if (event.lengthComputable) {
@@ -101,9 +75,11 @@ weechat.factory('imgur', ['$rootScope', function($rootScope) {
 
         }
 
-        // Send request with form data
-        xhttp.send(fd);
+        xhr.onerror = function() {
+            showErrorMsg();
+        }
 
+        xhr.send(image);
     };
 
     var showErrorMsg = function() {
