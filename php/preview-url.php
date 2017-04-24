@@ -68,6 +68,10 @@ try {
   curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
   curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 6);
+  curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Accept-Charset' => 'utf-8',
+    'Accept' => 'text/html; charset=utf-8',
+  ]);
   curl_setopt($ch, CURLOPT_NOPROGRESS, false);
   curl_setopt($ch, CURLOPT_PROGRESSFUNCTION, function($ch, $download_size, $downloaded, $upload_size, $uploaded) {
     if ($downloaded >= 204800) { # 200KB
@@ -90,7 +94,7 @@ try {
   $final_origin = $final_url['host'] . (array_key_exists('port', $final_url) ? ':'.$final_url['port'] : '');
   curl_close($ch);
 
-  $doc = DOMDocument::loadHTML($body);
+  $doc = DOMDocument::loadHTML(mb_convert_encoding($body, 'html-entities', 'utf-8'));
   if ($doc == false) {
     throw new HTMLParsingException('Parse failed.');
   }
@@ -142,7 +146,7 @@ try {
   //====
 
   header('Cache-Control: max-age=3600');
-  header('Content-Type: application/json; charset=UTF-8');
+  header('Content-Type: application/json; charset=utf-8');
   echo json_encode([
     'type' => $content_type,
     'length' => $content_length,
