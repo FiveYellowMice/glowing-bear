@@ -219,6 +219,11 @@ plugins.factory('userPlugins', function() {
                 summaryElement.append(angular.element('<small></small>')
                                              .addClass('embed-webpage-summary-origin')
                                              .text(info.summary.origin));
+                if (info.summary.image) {
+                    summaryElement.append(angular.element('<img>')
+                                                 .addClass('embed-webpage-summary-image')
+                                                 .attr('src', info.summary.image));
+                }
                 if (info.summary.description) {
                     summaryElement.append(angular.element('<blockquote></blockquote>')
                                                  .addClass('embed-webpage-summary-description')
