@@ -94,56 +94,37 @@ try {
   $final_origin = $final_url['host'] . (array_key_exists('port', $final_url) ? ':'.$final_url['port'] : '');
   curl_close($ch);
 
-  $doc = DOMDocument::loadHTML(mb_convert_encoding($body, 'html-entities', 'utf-8'));
+  $doc = DOMDocument::loadHTML(mb_convert_encoding($body, 'html-entities', 'utf-8'), LIBXML_NOERROR | LIBXML_NOWARNING);
   if ($doc == false) {
     throw new HTMLParsingException('Parse failed.');
   }
+  $xpath = new DOMXpath($doc);
 
-  // Get title.
-  $title_text = null;
+  $title_text = $xpath->query("//title//text()")->item(0);
+  if (!$title_text) $title_text = $xpath->query("//h1//text()")->item(0);
 
-  $title_element = $doc->getElementsByTagName('title')->item(0);
-  if ($title_element) {
-    $title_text = trim($title_element->textContent);
-  }
-  $title_element = null;
-
-  if (!$title_text) {
-    $h1_element = $doc->getElementsByTagName('h1')->item(0);
-    if ($h1_element) {
-      $title_text = trim($h1_element->textContent);
-    }
-    $h1_element = null;
-  }
-
-  if (!$title_text) {
+  if ($title_text) {
+    $title_text = $title_text->textContent;
+  } else {
     $title_text = null;
   }
 
-  // Get description.
-  $description_text = null;
+  $description_text = $xpath->query("//meta[@name='description']/@content")->item(0);
+  if (!$description_text) $description_text = $xpath->query("//meta[@property='og:description']/@content")->item(0);
 
-  $meta_elements = $doc->getElementsByTagName('meta');
-  $meta_description_element = null;
-  foreach ($meta_elements as $meta_element) {
-    $name_attribute = $meta_element->attributes->getNamedItem('name');
-    if ($name_attribute && $name_attribute->nodeValue == 'description') {
-      $meta_description_element = $meta_element;
-      break;
-    }
-  }
-  if ($meta_description_element) {
-    $content_attribute = $meta_description_element->attributes->getNamedItem('content');
-    if ($content_attribute) {
-      $description_text = trim($content_attribute->nodeValue);
-    }
-  }
-
-  if (!$description_text) {
+  if ($description_text) {
+    $description_text = $description_text->textContent;
+  } else {
     $description_text = null;
   }
 
-  //====
+  $og_image = $xpath->query("//meta[@property='og:image']/@content")->item(0);
+
+  if ($og_image) {
+    $og_image = $og_image->textContent;
+  } else {
+    $og_image = null;
+  }
 
   header('Cache-Control: max-age=3600');
   header('Content-Type: application/json; charset=utf-8');
@@ -154,8 +135,9 @@ try {
       'title' => $title_text,
       'description' => $description_text,
       'origin' => $final_origin,
+      'image' => $og_image,
     ],
-  ], JSON_UNESCAPED_UNICODE);
+  ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 } catch (HTMLParsingException $e) {
   header('Cache-Control: max-age=3600');
