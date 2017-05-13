@@ -9,11 +9,11 @@
   },
   "app": {
     "urls": [
-      "https://www.glowing-bear.org/"
+      "https://irc.fiveyellowmice.com/glowing-bear/"
     ],
     "launch": {
       "container": "panel",
-      "web_url": "https://www.glowing-bear.org/"
+      "web_url": "https://irc.fiveyellowmice.com/glowing-bear/"
     }
   },
   "permissions": [
