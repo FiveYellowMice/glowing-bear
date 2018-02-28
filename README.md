@@ -4,9 +4,9 @@
 
 Glowing Bear ~ Haram Edition ~ is a fork of [Glowing Bear](https://github.com/glowing-bear/glowing-bear). It has several improvements:
 
-- Real URL preview  
+- Real URL preview
   The original Glowing Bear uses a very dumb way to decide whether and how to show preview of an URL - by matching hard-coded RegExes. That is understandable because of the same-origin policy. But Glowing Bear ~ haram Edition ~ uses a little bit of backend code (PHP) to detect the Content-Type of the URL, and title and description of an HTML webpage. This way is also much more lightweight, compare to excessive use of iframes.
-- Smaller preview for stickers  
+- Smaller preview for stickers
   Stickers are usually not as important as normal images. So to maximize screen usage, Glowing Bear ~ Haram Edition ~ will make them smaller.
 
 More improvements / features to come!
