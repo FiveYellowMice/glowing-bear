@@ -260,7 +260,7 @@ plugins.factory('userPlugins', function() {
 
             function showPreviewVideo(url) {
                 var element = self.getElement();
-                var velement = angular.element('<video autoplay loop muted></video>')
+                var velement = angular.element('<video autoplay controls loop muted></video>')
                                      .addClass('embed')
                                      .attr('width', '560')
                                      .append(angular.element('<source></source>')

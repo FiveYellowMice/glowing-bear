@@ -134,6 +134,8 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
                 var buffer = models.getActiveBuffer();
                 // This can also be triggered before connecting to the relay, check for null (not undefined!)
                 if (buffer !== null) {
+                    var server = models.getServerForBuffer(buffer);
+                    server.unread -= (buffer.unread + buffer.notification);
                     buffer.unread = 0;
                     buffer.notification = 0;
 
@@ -356,7 +358,9 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         } else if ($scope.swipeStatus === 0) {
             // show nicklist
             $scope.swipeStatus = -1;
-            $scope.updateShowNicklist();
+            if (!$scope.updateShowNicklist()) {
+                $scope.swipeStatus = 0;
+            }
         } else if ($scope.swipeStatus === -1) {
             /* do nothing */
         } else {
@@ -516,7 +520,7 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         // the messages in this buffer before you switched to the new one
         // this is only needed with new type of clearing since in the old
         // way WeeChat itself takes care of that part
-        if (models.version[0] >= 1) {
+        if (settings.hotlistsync && models.version[0] >= 1) {
             connection.sendHotlistClear();
         }
 
@@ -714,16 +718,20 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
                 return true;
             }
             // Always show core buffer in the list (issue #438)
-            // Also show server buffers in hierarchical view
-            if (buffer.fullName === "core.weechat" || (settings.orderbyserver && buffer.type === 'server')) {
+            if (buffer.fullName === "core.weechat") {
                 return true;
+            }
+
+            // In hierarchical view, show server iff it has a buffer with unread messages
+            if (settings.orderbyserver && buffer.type === 'server') {
+                return models.getServerForBuffer(buffer).unread > 0;
             }
 
             // Always show pinned buffers
             if (buffer.pinned) {
                 return true;
             }
-            return (buffer.unread > 0 || buffer.notification > 0) && !buffer.hidden;
+            return (buffer.unread > 0 && !buffer.hidden) || buffer.notification > 0;
         }
         return !buffer.hidden;
     };
@@ -761,26 +769,36 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         $scope.updateShowNicklist();
     });
     $scope.showNicklist = false;
-    // Utility function that template can use to check if nicklist should
-    // be displayed for current buffer or not
-    // is called on buffer switch and certain swipe actions
+    // Utility function that template can use to check if nicklist should be
+    // displayed for current buffer or not is called on buffer switch and
+    // certain swipe actions.  Sets $scope.showNicklist accordingly and returns
+    // whether the buffer even has a nicklist to show.
     $scope.updateShowNicklist = function() {
-        $scope.showNicklist = (function() {
-            var ab = models.getActiveBuffer();
-            // Check whether buffer exists and nicklist is non-empty
-            if (!ab || ab.isNicklistEmpty()) {
-                return false;
-            }
-            // Check if nicklist is disabled in settings (ignored on mobile)
-            if (!utils.isMobileUi() && settings.nonicklist) {
-                return false;
-            }
-            // mobile: hide nicklist unless overriden by setting or swipe action
-            if (utils.isMobileUi() && !settings.alwaysnicklist && $scope.swipeStatus !== -1) {
-                return false;
-            }
+        var ab = models.getActiveBuffer();
+        // Check whether buffer exists and nicklist is non-empty
+        if (!ab || ab.isNicklistEmpty()) {
+            $scope.showNicklist = false;
+            return false;
+        }
+        // Check if nicklist is disabled in settings (ignored on mobile)
+        if (!utils.isMobileUi() && settings.nonicklist) {
+            $scope.showNicklist = false;
             return true;
-        })();
+        }
+        // mobile: hide nicklist unless overriden by setting or swipe action
+        if (utils.isMobileUi() && !settings.alwaysnicklist && $scope.swipeStatus !== -1) {
+            $scope.showNicklist = false;
+            return true;
+        }
+        $scope.showNicklist = true;
+        // hack: retrigger the favorite-font update mechanism when showing the
+        // nicklist because the div is ng-if=showNicklist instead of ng-show for
+        // performance reasons (especially on mobile)
+        $timeout(function() {
+            utils.changeClassStyle('favorite-font', 'fontFamily', settings.fontfamily);
+            utils.changeClassStyle('favorite-font', 'fontSize', settings.fontsize);
+        }, 0);
+        return true;
     };
 
 //XXX not sure whether this belongs here
@@ -799,7 +817,7 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         // No notifications, find first buffer with unread lines instead
         for (i in sortedBuffers) {
             buffer = sortedBuffers[i];
-            if (buffer.unread > 0) {
+            if (buffer.unread > 0 && !buffer.hidden) {
                 $scope.setActiveBuffer(buffer.id);
                 return;
             }
@@ -814,12 +832,18 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         // direction is +1 for next buffer, -1 for previous buffer
         var sortedBuffers = _.sortBy($scope.getBuffers(), $rootScope.predicate);
         var activeBuffer = models.getActiveBuffer();
-        var index = sortedBuffers.indexOf(activeBuffer);
-        if (index >= 0) {
-            var newBuffer = sortedBuffers[index + direction];
-            if (newBuffer) {
-                $scope.setActiveBuffer(newBuffer.id);
-            }
+        var index = sortedBuffers.indexOf(activeBuffer) + direction;
+        var newBuffer;
+
+        // look for next non-hidden buffer
+        while (index >= 0 && index < sortedBuffers.length &&
+               (!newBuffer || newBuffer.hidden)) {
+            newBuffer = sortedBuffers[index];
+            index += direction;
+        }
+
+        if (!!newBuffer) {
+            $scope.setActiveBuffer(newBuffer.id);
         }
     };
 
