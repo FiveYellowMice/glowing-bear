@@ -9,8 +9,6 @@ Glowing Bear ~ Haram Edition ~ is a fork of [Glowing Bear](https://github.com/gl
 - Smaller preview for stickers
   Stickers are usually not as important as normal images. So to maximize screen usage, Glowing Bear ~ Haram Edition ~ will make them smaller.
 
-More improvements / features to come!
-
 ## Getting started
 
 Just use <https://github.com/glowing-bear/glowing-bear>, that's the easiest way. And read the [original Glowing Bear guide](https://github.com/glowing-bear/glowing-bear#readme) for detail. But if you want to host your own, read ahead.
