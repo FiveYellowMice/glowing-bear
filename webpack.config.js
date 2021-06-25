@@ -24,6 +24,7 @@ module.exports = {
         }),
         new CopyWebpackPlugin({
             patterns: [
+                "php/**",
                 "**/*.css",
                 "**/*.svg",
                 "**/*.png",
