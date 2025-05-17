@@ -1,6 +1,6 @@
 'use strict';
 
-import * as _ from "underscore";
+
 
 var weechat = angular.module('weechat');
 
@@ -104,7 +104,7 @@ weechat.directive('inputBar', function() {
                 var completion_suffix = models.wconfig['weechat.completion.nick_completer'];
                 var add_space = models.wconfig['weechat.completion.nick_add_space'];
                 var nickComp = IrcUtils.completeNick(input, caretPos, $scope.iterCandidate,
-                                                     activeBuffer.getNicklistByTime(),
+                                                     activeBuffer.getNicklistByTime().reverse(),
                                                      completion_suffix, add_space);
 
                 // remember iteration candidate
@@ -294,7 +294,7 @@ weechat.directive('inputBar', function() {
                     ab.addToHistory($scope.command);
 
                     // Split the command into multiple commands based on line breaks
-                    _.each($scope.command.split(/\r?\n/), function(line) {
+                    $scope.command.split(/\r?\n/).forEach(function(line) {
                         // Ask before a /quit
                         if (line === '/quit' || line.indexOf('/quit ') === 0) {
                             if (!window.confirm("Are you sure you want to quit WeeChat? This will prevent you from connecting with Glowing Bear until you restart WeeChat on the command line!")) {
@@ -471,7 +471,7 @@ weechat.directive('inputBar', function() {
                     bufferNumber = code - 48 - 1 ;
 
                     // quick select filtered entries
-                    if (($scope.$parent.search.length || $scope.$parent.onlyUnread) && $scope.$parent.filteredBuffers.length) {
+                    if (($scope.$parent.search.length || settings.onlyUnread) && $scope.$parent.filteredBuffers.length) {
                         filteredBufferNum = $scope.$parent.filteredBuffers[bufferNumber];
                         if (filteredBufferNum !== undefined) {
                             activeBufferId = [filteredBufferNum.number, filteredBufferNum.id];
@@ -480,7 +480,7 @@ weechat.directive('inputBar', function() {
                         // Map the buffers to only their numbers and IDs so we don't have to
                         // copy the entire (possibly very large) buffer object, and then sort
                         // the buffers according to their WeeChat number
-                        sortedBuffers = _.map(models.getBuffers(), function(buffer) {
+                        sortedBuffers = Object.entries(models.getBuffers()).map(function([key, buffer], index) {
                             return [buffer.number, buffer.id];
                         }).sort(function(left, right) {
                             // By default, Array.prototype.sort() sorts alphabetically.
@@ -543,7 +543,9 @@ weechat.directive('inputBar', function() {
 
                 // Alt+< -> switch to previous buffer
                 // https://w3c.github.io/uievents-code/#code-IntlBackslash
-                if ($event.altKey && (code === 60 || code === 226 || key === "IntlBackslash")) {
+                // Support both backquote and intlbackslash for this action, since macos is weird
+                // https://github.com/microsoft/vscode/issues/65082
+                if ($event.altKey && (code === 60 || code === 226 || key === "IntlBackslash" || key === "Backquote"))  {
                     var previousBuffer = models.getPreviousBuffer();
                     if (previousBuffer) {
                         models.setActiveBuffer(previousBuffer.id);
@@ -588,12 +590,12 @@ weechat.directive('inputBar', function() {
                 // Alt-h -> Toggle all as read
                 if ($event.altKey && !$event.ctrlKey && code === 72) {
                     var buffers = models.getBuffers();
-                    _.each(buffers, function(buffer) {
+                    Object.entries(buffers).forEach(function([key, buffer], index) {
                         buffer.unread = 0;
                         buffer.notification = 0;
                     });
                     var servers = models.getServers();
-                    _.each(servers, function(server) {
+                    Object.entries(servers).forEach(function([key, server], index) {
                         server.unread = 0;
                     });
                     connection.sendHotlistClearAll();

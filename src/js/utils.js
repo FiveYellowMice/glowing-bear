@@ -1,18 +1,18 @@
 
-import * as _ from "underscore";
+
 
 var weechat = angular.module('weechat');
 
 weechat.factory('utils', function() {
 	// Helper to change style of a class
 	var changeClassStyle = function(classSelector, attr, value) {
-	    _.each(document.getElementsByClassName(classSelector), function(e) {
+	    Array.from(document.getElementsByClassName(classSelector)).forEach(function(e) {
 	        e.style[attr] = value;
 	    });
 	};
 	// Helper to get style from a class
 	var getClassStyle = function(classSelector, attr) {
-	    _.each(document.getElementsByClassName(classSelector), function(e) {
+	    Array.from(document.getElementsByClassName(classSelector)).forEach(function(e) {
 	        return e.style[attr];
 	    });
 	};
@@ -24,10 +24,10 @@ weechat.factory('utils', function() {
         return (document.body.clientWidth < mobile_cutoff);
     };
 
-    var isCordova = function() {
-        return window.cordova !== undefined;
+    const _isTauri = window.__TAURI__ !== undefined;
+    var isTauri = function() {
+        return _isTauri;
     };
-
 
     // Inject a javascript (used by KaTeX)
     var inject_script = function(script_url) {
@@ -86,7 +86,7 @@ weechat.factory('utils', function() {
     	changeClassStyle: changeClassStyle,
     	getClassStyle: getClassStyle,
         isMobileUi: isMobileUi,
-        isCordova: isCordova,
+        isTauri: isTauri,
         inject_script: inject_script,
         inject_css: inject_css,
         hexStringToByte: hexStringToByte,

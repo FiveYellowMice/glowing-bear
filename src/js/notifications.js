@@ -24,8 +24,8 @@ weechat.factory('notifications', ['$rootScope', '$log', 'models', 'settings', 'u
             }
         }
 
-        // Check for serviceWorker support, and also disable serviceWorker if we're running in electron process, since that's just problematic and not necessary, since gb then already is in a separate process
-        if ('serviceWorker' in navigator && window.is_electron !== 1) {
+        // Check for serviceWorker support, and also disable serviceWorker if we're running in tauri process, since that's just problematic and not necessary, since gb then already is in a separate process
+        if ('serviceWorker' in navigator && !utils.isTauri()) {
             $log.info('Service Worker is supported');
             navigator.serviceWorker.register('serviceworker.js').then(function(reg) {
                 $log.info('Service Worker install:', reg);
@@ -34,24 +34,10 @@ weechat.factory('notifications', ['$rootScope', '$log', 'models', 'settings', 'u
                 $log.info('Service Worker err:', err);
             });
         }
-
-        document.addEventListener('deviceready', function() {
-            // Add cordova local notification click handler
-            if (utils.isCordova() && window.cordova.plugins !== undefined && window.cordova.plugins.notification !== undefined &&
-                window.cordova.plugins.notification.local !== undefined) {
-                window.cordova.plugins.notification.local.on("click", function (notification) {
-                    // go to buffer
-                    var data = JSON.parse(notification.data);
-                    models.setActiveBuffer(data.buffer);
-                    window.focus();
-                    // clear this notification
-                    window.cordova.plugins.notification.local.clear(notification.id);
-                });
-            }
-        });
     };
 
     var showNotification = function(buffer, title, body) {
+        $log.info('Showing notification', title);
         if (serviceworker) {
             navigator.serviceWorker.ready.then(function(registration) {
                 registration.showNotification(title, {
@@ -87,13 +73,14 @@ weechat.factory('notifications', ['$rootScope', '$log', 'models', 'settings', 'u
                 body: body,
                 icon: 'assets/img/favicon.png'
             });
+            $log.info('Using Web API Notification', notification);
 
             // Save notification, so we can close all outstanding ones when disconnecting
             notification.id = notifications.length;
             notifications.push(notification);
 
             // Cancel notification automatically
-            var timeout = 15*1000;
+            var timeout = 15*1000; // 15 seconds
             notification.onshow = function() {
                 setTimeout(function() {
                     notification.close();
@@ -101,7 +88,8 @@ weechat.factory('notifications', ['$rootScope', '$log', 'models', 'settings', 'u
             };
 
             // Click takes the user to the buffer
-            notification.onclick = function() {
+            notification.onclick = function(event) {
+                event.preventDefault();
                 models.setActiveBuffer(buffer.id);
                 window.focus();
                 notification.close();
@@ -111,25 +99,7 @@ weechat.factory('notifications', ['$rootScope', '$log', 'models', 'settings', 'u
             notification.onclose = function() {
                 delete notifications[this.id];
             };
-
-        } else if (utils.isCordova() && window.cordova.plugins !== undefined && window.cordova.plugins.notification !== undefined && window.cordova.plugins.notification.local !== undefined) {
-            // Cordova local notification
-            // Calculate notification id from buffer ID
-            // Needs to be unique number, but we'll only ever have one per buffer
-            var id = parseInt(buffer.id, 16);
-
-            // Cancel previous notification for buffer (if there was one)
-            window.cordova.plugins.notification.local.clear(id);
-
-            // Send new notification
-            window.cordova.plugins.notification.local.schedule({
-                id: id,
-                text: body,
-                title: title,
-                data: { buffer: buffer.id }  // remember buffer id for when the notification is clicked
-            });
         }
-
     };
 
 
@@ -161,15 +131,17 @@ weechat.factory('notifications', ['$rootScope', '$log', 'models', 'settings', 'u
 
         var activeBuffer = models.getActiveBuffer();
         if (activeBuffer) {
-            $rootScope.pageTitle = activeBuffer.shortName + ' | ' + activeBuffer.rtitle;
+            let title = activeBuffer.shortName + ' | ' + activeBuffer.rtitle;
+            $rootScope.pageTitle = title;
+            // If running in Tauri, use platform code to update its window title
+            if (utils.isTauri()) {
+                __TAURI__.window.appWindow.setTitle(title);
+            }
+            
         }
     };
 
     var updateFavico = function() {
-        if (utils.isCordova()) {
-            return; // cordova doesn't have a favicon
-        }
-
         var notifications = unreadCount('notification');
         if (notifications > 0) {
             $rootScope.favico.badge(notifications, {
@@ -195,15 +167,9 @@ weechat.factory('notifications', ['$rootScope', '$log', 'models', 'settings', 'u
         }
     };
 
-    // Update app badge (electron only)
+    // Update app badge (tauri? only)
     var updateBadge = function(value) {
-
-        // Send new value to preloaded global function
-        // if it exists
-        if (typeof setElectronBadge === 'function') {
-            setElectronBadge(value);
-        }
-
+        // leaving this a placeholder for future tauri badge operations
     };
 
     /* Function gets called from bufferLineAdded code if user should be notified */
@@ -235,7 +201,7 @@ weechat.factory('notifications', ['$rootScope', '$log', 'models', 'settings', 'u
 
         showNotification(buffer, title, body);
 
-        if (!utils.isCordova() && settings.soundnotification) {
+        if (settings.soundnotification) {
             var audioFile = "assets/audio/sonar";
             var soundHTML = '<audio autoplay="autoplay"><source src="' + audioFile + '.ogg" type="audio/ogg" /><source src="' + audioFile + '.mp3" type="audio/mpeg" /></audio>';
             document.getElementById("soundNotification").innerHTML = soundHTML;

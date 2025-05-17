@@ -4,7 +4,7 @@
 
 'use strict';
 
-import * as _ from "underscore";
+
 
 var plugins = angular.module('plugins', []);
 
@@ -24,7 +24,7 @@ var Plugin = function(name, contentForMessage) {
 
 
 // Regular expression that detects URLs for UrlPlugin
-var urlRegexp = /(?:(?:https?|ftp):\/\/|www\.|ftp\.)\S*[^\s.;,(){}<>]/g;
+var urlRegexp = /(?:(?:https?|ftp):\/\/|www\.|ftp\.)\S*[^\s.;,(){}<>[\]]/g;
 /*
  * Definition of a user provided plugin that consumes URLs
  *
@@ -34,7 +34,7 @@ var urlRegexp = /(?:(?:https?|ftp):\/\/|www\.|ftp\.)\S*[^\s.;,(){}<>]/g;
 var UrlPlugin = function(name, urlCallback) {
     return {
         contentForMessage: function(message) {
-            var urls = _.uniq(message.match(urlRegexp));
+            var urls = [... new Set(message.match(urlRegexp))];
             var content = [];
 
             for (var i = 0; urls && i < urls.length; i++) {

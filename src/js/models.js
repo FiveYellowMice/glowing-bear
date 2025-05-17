@@ -4,9 +4,10 @@
  */
 'use strict';
 
-import * as _ from "underscore";
+
 
 import * as weeChat from './weechat';
+import { sortBy } from './misc';
 
 var models = angular.module('weechatModels', []);
 
@@ -73,6 +74,7 @@ models.service('models', ['$rootScope', '$filter', 'bufferResume', function($roo
         // weechat properties
         var fullName = parseRichText(message.full_name)[0].text;
         var shortName = parseRichText(message.short_name)[0].text;
+        var classes = parseRichText(message.short_name)[0].classes;
         var hidden = message.hidden;
         // If it's a channel, trim away the prefix (#, &, or +). If that is empty and the buffer
         // has a short name, use a space (because the prefix will be displayed separately, and we don't want
@@ -156,15 +158,12 @@ models.service('models', ['$rootScope', '$filter', 'bufferResume', function($roo
             if (group === undefined) {
                 return;
             }
-            group.nicks = _.filter(group.nicks, function(n) { return n.name !== nick.name;});
-            /*
             for (i in group.nicks) {
                 if (group.nicks[i].name == nick.name) {
-                    delete group.nicks[i];
+                    group.nicks.splice(i, 1);
                     break;
                 }
             }
-            */
         };
         /*
          * Clear the nicklist
@@ -219,15 +218,15 @@ models.service('models', ['$rootScope', '$filter', 'bufferResume', function($roo
             else if (nick === "" || nick === "=!=") {
                 return;
             }
-            _.each(nicklist, function(nickGroup) {
-                _.each(nickGroup.nicks, function(nickObj) {
-                    if (nickObj.name === nick) {
-                        // Use the order the line arrive in for simplicity
-                        // instead of using weechat's own timestamp
-                        nickObj.spokeAt = Date.now();
+            for (let groupIdx in nicklist) {
+                let nicks = nicklist[groupIdx].nicks;
+                for (let curr_nick of nicks) {
+                    if (curr_nick.name === nick) {
+                        curr_nick.spokeAt = Date.now();
+                        return;
                     }
-                });
-            });
+                }
+            }
         };
 
         /*
@@ -237,15 +236,11 @@ models.service('models', ['$rootScope', '$filter', 'bufferResume', function($roo
          */
         var getNicklistByTime = function() {
             var newlist = [];
-            _.each(nicklist, function(nickGroup) {
-                _.each(nickGroup.nicks, function(nickObj) {
-                    newlist.push(nickObj);
-                });
-            });
+            for (let groupIdx in nicklist) {
+                newlist = newlist.concat(nicklist[groupIdx].nicks);
+            }
 
-            newlist.sort(function(a, b) {
-                return a.spokeAt < b.spokeAt;
-            });
+            newlist.sort(sortBy('spokeAt'));
 
             return newlist;
         };
@@ -347,6 +342,7 @@ models.service('models', ['$rootScope', '$filter', 'bufferResume', function($roo
             shortName: shortName,
             hidden: hidden,
             trimmedName: trimmedName,
+            nameClasses: classes,
             prefix: prefix,
             number: number,
             title: title,
@@ -601,11 +597,12 @@ models.service('models', ['$rootScope', '$filter', 'bufferResume', function($roo
             activeBuffer = this.model.buffers[bufferId];
         }
         else {
-            activeBuffer = _.find(this.model.buffers, function(buffer) {
-                if (buffer[key] === bufferId) {
-                    return buffer;
-                }
+            activeBuffer = Object.entries(this.model.buffers).find(([id, buffer]) => {
+                return buffer[key] === bufferId;
             });
+            if (activeBuffer !== undefined) {
+                activeBuffer = activeBuffer[1]; // value not key
+            }
         }
 
         if (activeBuffer === undefined) {
@@ -703,7 +700,7 @@ models.service('models', ['$rootScope', '$filter', 'bufferResume', function($roo
             return;
         }
         if (buffer.active) {
-            var firstBuffer = _.keys(this.model.buffers)[0];
+            var firstBuffer = Object.keys(this.model.buffers)[0];
             this.setActiveBuffer(firstBuffer);
         }
         // Can't use `buffer` here, needs to be deleted from the list

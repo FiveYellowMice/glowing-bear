@@ -1,16 +1,24 @@
 'use strict';
 
 import * as Favico from "favico.js";
-import * as _ from "underscore";
+
 
 import { connectionFactory } from './connection';
+import { sortBy } from './misc';
 
-// cordova splash screen
-document.addEventListener("deviceready", function () {
-    if (navigator.splashscreen !== undefined) {
-        navigator.splashscreen.hide();
-    }
-}, false);
+/* debounce helper so we dont have to use underscore.js */
+const debounce = function (func, wait, immediate) {
+    var timeout;
+    return function () {
+        var context = this, args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(function () {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        }, wait);
+        if (immediate && !timeout) func.apply(context, args);
+    };
+};
 
 var weechat = angular.module('weechat', ['ngRoute', 'localStorage', 'weechatModels', 'bufferResume', 'plugins', 'IrcUtils', 'ngSanitize', 'ngWebsockets', 'ngTouch'], ['$compileProvider', function($compileProvider) {
     // hacky way to be able to find out if we're in debug mode
@@ -49,7 +57,7 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         'port': 9001,
         'path': 'weechat',
         'ssl': (window.location.protocol === "https:"),
-        'compatibilityWeechat28': true,
+        'compatibilityWeechat28': false,
         'useTotp': false,
         'savepassword': false,
         'autoconnect': false,
@@ -59,7 +67,7 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         'onlyUnread': false,
         'hotlistsync': true,
         'orderbyserver': true,
-        'useFavico': !utils.isCordova(),
+        'useFavico': true,
         'soundnotification': true,
         'fontsize': '14px',
         'fontfamily': (utils.isMobileUi() ? 'sans-serif' : 'Inconsolata, Consolas, Monaco, Ubuntu Mono, monospace'),
@@ -118,10 +126,9 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
     })();
 
     // Show a TLS warning if GB was loaded over an unencrypted connection,
-    // except for local instances (local files, testing, cordova, or electron)
+    // except for local instances (local files, testing)
     $scope.show_tls_warning = (["https:", "file:"].indexOf(window.location.protocol) === -1) &&
-        (["localhost", "127.0.0.1", "::1"].indexOf(window.location.hostname) === -1) &&
-        !window.is_electron && !utils.isCordova();
+        (["localhost", "127.0.0.1", "::1"].indexOf(window.location.hostname) === -1);
 
     $rootScope.isWindowFocused = function() {
         if (typeof $scope.documentHidden === "undefined") {
@@ -216,7 +223,7 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
                         };
                         $rootScope.updateBufferBottom(true);
                         $rootScope.scrollWithBuffer(true);
-                        bl.onscroll = _.debounce(function() {
+                        bl.onscroll = debounce(function() {
                             $rootScope.updateBufferBottom();
                         }, 80);
                         setTimeout(scrollHeightObserver, 500);
@@ -253,9 +260,8 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         }
     });
 
-    if (!utils.isCordova()) {
-        $rootScope.favico = new Favico({animation: 'none'});
-    }
+    $rootScope.favico = new Favico({animation: 'none'});
+    
     $scope.notifications = notifications.unreadCount('notification');
     $scope.unread = notifications.unreadCount('unread');
 
@@ -264,7 +270,7 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         $scope.notifications = notifications.unreadCount('notification');
         $scope.unread = notifications.unreadCount('unread');
 
-        if (!utils.isCordova() && settings.useFavico && $rootScope.favico) {
+        if (settings.useFavico && $rootScope.favico) {
             notifications.updateFavico();
         }
     });
@@ -274,11 +280,8 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         $rootScope.pageTitle = '';
         $rootScope.notificationStatus = '';
 
-        // cancel outstanding notifications (incl cordova)
+        // cancel outstanding notifications
         notifications.cancelAll();
-        if (window.plugin !== undefined && window.plugin.notification !== undefined && window.plugin.notification.local !== undefined) {
-            window.plugin.notification.local.cancelAll();
-        }
 
         models.reinitialize();
         $rootScope.$emit('notificationChanged');
@@ -381,7 +384,8 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         document.getElementById('content').setAttribute('sidebar-state', 'visible');
         if (utils.isMobileUi()) {
             // de-focus the input bar when opening the sidebar on mobile, so that the keyboard goes down
-            _.each(document.getElementsByTagName('textarea'), function(elem) {
+            // TODO: this should be using get element by id, since there is other texareas
+            Object.entries(document.getElementsByTagName('textarea')).forEach(function([key, elem]) {
                 $timeout(function(){elem.blur();});
             });
         }
@@ -436,10 +440,6 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
             return;
         }
 
-        if (utils.isCordova()) {
-            return; // cordova doesn't have a favicon
-        }
-
         if (useFavico) {
             notifications.updateFavico();
         } else {
@@ -453,8 +453,7 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
     // This also fires when the page is loaded if enabled.
     // Note that this says MathJax but we switched to KaTeX
     settings.addCallback('enableMathjax', function(enabled) {
-        // no latex math support for cordova right now
-        if (!utils.isCordova() && enabled && !$rootScope.mathjax_init) {
+        if (enabled && !$rootScope.mathjax_init) {
             // Load MathJax only once
             $rootScope.mathjax_init = true;
 
@@ -574,7 +573,7 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
     window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame;
 
     // Recalculate number of lines on resize
-    window.addEventListener("resize", _.debounce(function() {
+    window.addEventListener("resize", debounce(function() {
         // Recalculation fails when not connected
         if ($rootScope.connected) {
             // Show the sidebar if switching away from mobile view, hide it when switching to mobile
@@ -900,19 +899,16 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
 //XXX not sure whether this belongs here
     $rootScope.switchToActivityBuffer = function() {
         // Find next buffer with activity and switch to it
-        var sortedBuffers = _.sortBy($scope.getBuffers(), 'number');
-        var i, buffer;
+        var sortedBuffers = Object.entries($scope.getBuffers()).sort(sortBy('number'));
         // Try to find buffer with notification
-        for (i in sortedBuffers) {
-            buffer = sortedBuffers[i];
+        for (const [bufferid, buffer] of sortedBuffers) {
             if (buffer.notification > 0) {
                 $scope.setActiveBuffer(buffer.id);
                 return;  // return instead of break so that the second for loop isn't executed
             }
         }
         // No notifications, find first buffer with unread lines instead
-        for (i in sortedBuffers) {
-            buffer = sortedBuffers[i];
+        for (const [bufferid, buffer] of sortedBuffers) {
             if (buffer.unread > 0 && !buffer.hidden) {
                 $scope.setActiveBuffer(buffer.id);
                 return;
@@ -926,7 +922,7 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
 
     $rootScope.switchToAdjacentBuffer = function(direction) {
         // direction is +1 for next buffer, -1 for previous buffer
-        var sortedBuffers = _.sortBy($scope.getBuffers(), $rootScope.predicate);
+        var sortedBuffers = Object.values($scope.getBuffers()).sort(sortBy($rootScope.predicate));
         var activeBuffer = models.getActiveBuffer();
         var index = sortedBuffers.indexOf(activeBuffer) + direction;
         var newBuffer;
@@ -1011,10 +1007,6 @@ weechat.controller('WeechatCtrl', ['$rootScope', '$scope', '$store', '$timeout',
         } else {
             if ($rootScope.connected) {
                 $scope.disconnect();
-            }
-
-            if (!utils.isCordova()) {
-                $scope.favico.reset();
             }
         }
     };

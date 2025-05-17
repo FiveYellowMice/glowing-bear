@@ -3,8 +3,6 @@
  */
 'use strict';
 
-import {sortBy, pluck} from "underscore";
-
 
 var IrcUtils = angular.module('IrcUtils', []);
 
@@ -17,22 +15,6 @@ IrcUtils.service('IrcUtils', [function() {
      var escapeRegExp = function(str) {
          return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
      };
-
-    /**
-     * Get a new version of a nick list, sorted by last speaker
-     *
-     * @param nickList Original nick list
-     * @return Sorted nick list
-     */
-    var _ciNickList = function(nickList) {
-
-        var newList = sortBy(nickList, function(nickObj) {
-            return -nickObj.spokeAt;
-        });
-        newList = pluck(newList, 'name');
-
-        return newList;
-    };
 
     /**
      * Completes a single nick.
@@ -123,7 +105,7 @@ IrcUtils.service('IrcUtils', [function() {
         var addSpaceChar = (addSpace === undefined || addSpace === 'on') ? ' ' : '';
 
         // new nick list to search in
-        var searchNickList = _ciNickList(nickList);
+        var searchNickList = nickList.map((el) => el.name);
 
         // text before and after caret
         var beforeCaret = text.substring(0, caretPos);
