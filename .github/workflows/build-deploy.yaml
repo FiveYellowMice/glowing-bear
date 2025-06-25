@@ -1,0 +1,32 @@
+name: Build & Deploy
+on: push
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    - run: npm ci
+    - uses: browser-actions/setup-chrome@v1.7.3
+      id: setup-chrome
+    - run: npm run build
+    - run: sh -e run_tests.sh
+      env:
+        CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
+        TRAVIS: 1 # Let tests run with ChromeHeadlessNoSandbox
+
+    - if: ${{ github.ref == 'refs/heads/master' }}
+      uses: burnett01/rsync-deployments@7.0.2
+      with:
+        switches: -zr --delete-after
+        path: build/
+        remote_path: /srv/irc/glowing-bear
+        remote_host: ${{ secrets.DEPLOY_HOST }}
+        remote_user: cicd
+        remote_key: ${{ secrets.DEPLOY_KEY }}
